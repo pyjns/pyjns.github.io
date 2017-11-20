@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="css/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="css/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="css/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>gather</title>
+  </head>
+  <body>
+    <section class="page-header"><h1 class="project-name">blog</h1></section>
+    <section class="main-content">
+        <ol>
+          <li>
+            手机端自适应
+            <pre>              
+                setHtml();
+                window.addEventListener("resize",function(){
+                  setHtml();
+                });
+                function setHtml(){
+                  var obj = document.documentElement;
+                  obj.style.fontSize = 100 * (obj.clientWidth/设计图像素宽度)+"px";
+                }              
+            </pre>
+          </li>
+          <li>
+            手机端分页
+            <pre>
+              var bodyScollTop = document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop,
+                  scrollHeight = document.body.offsetHeight,
+                  availHeight = window.innerHeight,
+                  extH = parseInt(availHeight/2);
+
+                if(availHeight+bodyScollTop >= scrollHeight - extH){
+                  if(this.pageNum >= this.totalP){
+                      //已无更多数据
+                  }else{
+                      //加载中...";
+                  }
+                }
+            </pre>
+          </li>
+          <li>
+            页面返回压入历史信息
+            <pre>              
+              window.addEventListener("popstate", function(e) {}, false);
+              function pushHistory(){
+                var state = {
+                    title: "title",
+                    url: "#"
+                };
+                window.history.pushState(state, "title", "#");
+              }
+            </pre>
+          </li>
+          <li>
+            手机端 能调起 相册 和 相机
+            <pre>              
+              <code><input type="file" value="点击上传图片" name="theFile" accept="image/*" capture></code>
+            </pre>
+          </li>
+          <li>
+            清除 select 默认样式
+            <pre>              
+              -webkit-appearance:none;
+            </pre>
+          </li>
+          <li>
+            固定在底部的文字
+            <pre>              
+              html,body{height: 100%;}
+              .content-wrap{
+                position: relative;
+                min-height: 100%;
+              }
+              .content-wrap:before{
+                content: ".";
+                color: rgba(0,0,0,0);
+                height: 1.14rem;
+                line-height: 1.14rem;
+              }
+              .content-wrap:after{
+                content: "*本活动最终解释权归人人理财所有";
+                padding-bottom: .2rem;
+                color: #282828;
+                font-size: .24rem;
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                text-align: center;
+              }
+            </pre>
+          </li>
+          <li>
+            
+            <pre>              
+              if (!window.XMLHttpRequest) {
+                window.XMLHttpRequest = function () {
+                  var a = ["MSXML2.XMLHTTP.4.0", "MSXML2.XMLHTTP.3.0", "MSXML2.XMLHTTP.2.6", "Msxml2.XMLHTTP", "Microsoft.XMLHTTP", "MSXML.XMLHTTP"];
+                  for (var c = 0; c < a.length; c++) {
+                      try {
+                          return new ActiveXObject(a[c])
+                      } catch (b) {
+                      }
+                  }
+                  return null
+                }
+            }
+            </pre>
+          </li>
+          <li>
+            摇一摇
+            <pre>
+              if (window.DeviceMotionEvent) {
+                  window.addEventListener('devicemotion', deviceMotionHandler, false);
+              } else {
+                  alert('本设备不支持devicemotion事件');
+              }
+
+              // var vibrateSupport = "vibrate" in navigator;
+              // if (vibrateSupport) { //兼容不同的浏览器
+              //     navigator.vibrate = navigator.vibrate || navigator.webkitVibrate || navigator.mozVibrate || navigator.msVibrate;
+              // }
+
+              function deviceMotionHandler(eventData) {
+                  eventData.stopPropagation();
+                  var acceleration = eventData.accelerationIncludingGravity;
+                  var curTime = new Date().getTime();
+
+                  if ((curTime - last_update) > 100) {
+                      var diffTime = curTime - last_update;
+                      last_update = curTime;
+                      x = acceleration.x;
+                      y = acceleration.y;
+                      z = acceleration.z;
+                      var speed = Math.abs(x + y + z - last_x - last_y - last_z) / diffTime * 10000;
+
+                      if (speed > SHAKE_THRESHOLD) {
+                          if (shakeOnoff) {
+                              shakeOnoff=false;
+                              // navigator.vibrate(1000);
+                              // setTimeout(function(){
+                              doResult();
+                              // },1000)
+                          }
+                      }
+                      last_x = x;
+                      last_y = y;
+                      last_z = z;
+                  }
+              }
+            </pre>
+          </li>
+          <li>
+            倒计时
+            <pre>              
+              function rqaFun(){
+                var drawStart =  Date.now(),
+                    diff = drawStart - startTime;
+                if(diff >= 1000){
+                    days = Math.floor(allSeconds/(60*60*24));
+                    remainder =  allSeconds%(60*60* 24);
+                    hours = Math.floor(remainder/(60*60));
+                    remainder = remainder%(60*60);
+                    minutes = Math.floor(remainder/60);
+                    seconds = remainder%(60);
+
+                    if(days<=-1 || hours<=-1 || minutes<=-1 || seconds<=-1){
+                        timeDown();
+                    }else{
+                        days = days.toString();
+                        days = days.length == 1?"0"+days:days;
+                        hours = hours.toString();
+                        hours = hours.length == 1?"0"+hours:hours;
+                        minutes = minutes.toString();
+                        minutes = minutes.length == 1?"0"+minutes:minutes;
+                        seconds = seconds.toString();
+                        seconds = seconds.length == 1?"0"+seconds:seconds;
+                        dayE.text(days);
+                        hourE.text(hours);
+                        minuteE.text(minutes);
+                        secondE.text(seconds);
+
+                        allSeconds--;
+                        startTime = drawStart;
+                        raf(rqaFun);
+                    }
+                }else{
+                    raf(rqaFun);
+                }
+              }
+            </pre>
+          </li>
+          <li>
+            滚动
+            <pre>              
+              var trh = $(".recordDiv table tr").height();
+              if(recordTable.find("tr").length > 5){
+                  var listPanel = $('.recordDiv table');
+                  var z = 0;//向上滚动top值
+                  function up() {//向上滚动
+                      listPanel.animate({//中奖结果
+                          'top': (z - trh ) + 'px'
+                      }, 500, 'linear', function () {
+                          listPanel.css({'top': '0px'})
+                              .find("tr:first").appendTo(listPanel);
+                          up();
+                      });
+                  }
+                  up();
+              }
+            </pre>
+          </li>
+          <li>
+            浏览器判断
+            <pre>              
+              var ua = navigator.userAgent.toLowerCase();
+              if (/iphone|ipad|ipod/.test(ua)) {
+                 // alert("iphone");
+              } else if (/android/.test(ua)) {
+                 // alert("android");
+              }
+            </pre>
+          </li>
+          <li>
+            每月多少天
+            <pre>              
+              if (month == 2) {
+                  days = year % 4 == 0 ? 29 : 28;
+              }else if (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12) {
+                  days = 31;
+              }else {
+                  days = 30;
+              }
+              for(var i= 1;i<=days;i++){
+                  arr.push({m:i,s:false});
+              }
+              for(var j=1;j<dW;j++){
+                  arr.unshift({m:"",s:false});
+              }
+              new Date(year+"/"+month+"/01 00:00:00").getDay()
+              getDay()星期几
+            </pre>
+          </li>
+          <li>
+            hightchart
+            <pre>              
+              this.chartParam.xAxis.categories[i] =dailyStatistic[i].date;
+              this.chartParam.series[0].data[i] =dailyStatistic[i].count;
+              this.chart = new Highcharts.Chart('chart',this.chartParam);
+              chart:null,
+              chartParam:{
+                  chart: {
+                      /*        type: 'area',*/
+                      height: 160,
+                      borderWidth: 0,
+                      borderColor: '#fff',
+                      marginTop: 10,
+                      marginBottom: 22,
+                      marginLeft:10,
+                      marginRight:10,
+                      backgroundColor: '#fff'
+                  },
+                  title: {
+                      text: null
+                  },
+                  legend: {
+                      enabled: false
+                  },
+                  credits: {
+                      enabled: false
+                  },
+                  xAxis: {
+                      tickColor: 'none',
+                      lineColor: 'none',
+                      gridLineColor:'none',
+                      categories: [],
+                      lineWidth: 0,
+                      labels: {
+                          y: 20, //x轴刻度往下移动20px
+                          style: {
+                              color: '#003366',//颜色
+                              fontSize:'.2rem'  //字体
+                          }
+                      }
+                  },
+                  yAxis: {
+                      title: {
+                          text: null
+                      }
+                  },
+                  plotOptions: {
+                      line: {
+                          color:"#75b6e5",
+                          dataLabels: {
+                              enabled: true,          // 开启数据标签
+                              style: {
+                                  color: '#003366',//颜色
+                                  /*                    fontSize:'12px',  //字体*/
+                                  textShadow:false,
+                                  fontWeight:"normal"
+                              }
+                          },
+                          enableMouseTracking: false // 关闭鼠标跟踪，对应的提示框、点击事件会失效
+                      }
+                  },
+                  series: [{
+                      data: []
+                  }]
+              }
+            </pre>
+          </li>
+          <li>
+            微信分享、定位
+            <pre>              
+               wx.config({
+                debug: true,
+                appId: 'wx895788ab5bb1453f', // 必填,公众号的唯一标识
+                timestamp: 1482303204, // 必填,生成签名的时间戳
+                nonceStr: 'g5zr5TiX9akSjrHc', // 必填,生成签名的随机串
+                signature: 'eab7c68c82812a55e741e3c41d02a29cb249bca4',// 必填,签名,详见微信JS-SDK说明文档
+                jsApiList: [
+                  'onMenuShareTimeline',
+                  'onMenuShareAppMessage',
+                  'getLocation'
+                ]
+              });
+              wx.ready(function(){
+                wx.onMenuShareAppMessage({          // 发送给朋友
+                  title: '你离豪车 or 校花的距离，只隔了一个我', // 分享标题
+                  desc: '豪车 or 校花，总有一款适合你', // 分享描述
+                  link: 'http://wx.goodcheku.cn/weidian/purchase?stockNum=KC91276364200&storeId=334&openId=', // 分享链接
+                  imgUrl: 'https://mmbiz.qlogo.cn/mmbiz_jpg/0Uaic1iasQaBGxCb3VCsyxL9QUJO82ticdfX096u0xj58pjAtBFCo4KJbzPuVUpstWeNWbOUADibYmYYmpmmJgm3Uw/0?wx_fmt=jpeg', // 分享图标
+                  type: 'link', // 分享类型,music、video或link，不填默认为link
+                  dataUrl: '', // 如果type是music或video，则要提供数据链接，默认为空
+                  success: function () {
+                    // 用户确认分享后执行的回调函数
+                  },
+                  cancel: function () {
+                    // 用户取消分享后执行的回调函数
+                  }
+                });
+
+                wx.onMenuShareTimeline({          // 分享到朋友圈
+                  title: '你离豪车 or 校花的距离，只隔了一个我', // 分享标题
+                  link: 'http://wx.goodcheku.cn/weidian/purchase?stockNum=KC91276364200&storeId=334&openId=', // 分享链接
+                  imgUrl: 'https://mmbiz.qlogo.cn/mmbiz_jpg/0Uaic1iasQaBGxCb3VCsyxL9QUJO82ticdfX096u0xj58pjAtBFCo4KJbzPuVUpstWeNWbOUADibYmYYmpmmJgm3Uw/0?wx_fmt=jpeg', // 分享图标
+                  success: function () {
+                    // 用户确认分享后执行的回调函数
+                  },
+                  cancel: function () {
+                    // 用户取消分享后执行的回调函数
+                  }
+                });
+
+              });
+
+            wx.ready(function(){
+                wx.getLocation({
+                    type: 'wgs84', // 默认为wgs84的gps坐标，如果要返回直接给openLocation用的火星坐标，可传入'gcj02'
+                    success: function (obj) {
+                        var latitude = obj.latitude; // 纬度，浮点数，范围为90 ~ -90
+                        var longitude = obj.longitude; // 经度，浮点数，范围为180 ~ -180。
+                        var speed = obj.speed; // 速度，以米/每秒计
+                        var accuracy = obj.accuracy; // 位置精度
+                        $.getJSON('http://api.map.baidu.com/geocoder/v2/?ak=eLp1EyDwc9ThfYfhvy6mppont8uOZ92a&callback=?&location='+latitude+','+longitude+'&output=json', function(res){
+                            //addressComponent => {city: "广州市", district: "天河区", province: "广东省", street: "广州大道", street_number: "中922号-之101-128"}
+                            var locateCityDiv = $(".locate_city");
+                            locateCityDiv.show();
+                            locateCityDiv.html(res.result.addressComponent.city+"  GPS定位");
+                            locateCityDiv.attr("cityName",res.result.addressComponent.city);
+                        });
+                    }
+                });
+            });
+            </pre>
+          </li>
+          <li>
+            
+            <pre>              
+              
+            </pre>
+          </li>
+        </ul>
+    </section>
+      <footer class="site-footer"></footer>  
+  </body>
+</html>
