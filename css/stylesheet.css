@@ -371,3 +371,11 @@ footer a:hover {
 
 /* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
 @media only screen and (max-width: 479px) { }
+
+
+pre {
+    background-color: #eee;
+    border-radius: 10px;
+    /* border: solid 1px #bbb; */
+    box-shadow: 0px 0px 8px #ddd inset;
+  }
