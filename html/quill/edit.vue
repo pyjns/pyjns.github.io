@@ -1,39 +1,58 @@
 <template>
   <el-row>
-    <title>
+    <div>
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :replace="true" to="/article/list">内容管理</el-breadcrumb-item>
         <el-breadcrumb-item>{{ articleId ? '编辑' : '新建' }}文章</el-breadcrumb-item>
       </el-breadcrumb>
-    </title>
-    <wrapper>
+    </div>
+    <div>
+      <div isShowIcon>文章发布</div>
       <div class="specification">
         <router-link to="/article/specification">发文规范</router-link>
       </div>
       <el-form label-width="100px" :model="form" :rules="rules" ref="ArticleForm">
         <el-form-item label="文章标题：" prop="title">
           <el-input
-            :value="form.title"
-            @input="onInputTitle"
-            :maxlength="30"
-            placeholder="请输入5～30字符长度的文章标题"
+            v-model="form.title"
+            :maxlength="64"
+            placeholder="请输入5～64字符长度的文章标题"
+            :disabled="publishStatus == 2"
           ></el-input>
         </el-form-item>
         <el-form-item label="原作者：" prop="author">
-          <el-input v-model="form.author" :maxlength="30" placeholder="请输入原作者"></el-input>
+          <el-input
+            v-model="form.author"
+            :maxlength="30"
+            placeholder="请输入原作者"
+            :disabled="publishStatus == 2"
+          ></el-input>
         </el-form-item>
         <el-form-item label="同步平台：" prop="platform">
-          <el-checkbox v-model="form.platformApp" label="APP"></el-checkbox>
-          <el-checkbox v-model="form.platformAlipay" label="支付宝小程序"></el-checkbox>
-          <el-checkbox v-model="form.platformWechat" label="微信小程序"></el-checkbox>
+          <el-checkbox
+            v-model="form.platformApp"
+            label="APP"
+            :disabled="publishStatus == 2 && platformApp"
+          ></el-checkbox>
+          <el-checkbox
+            v-model="form.platformAlipay"
+            label="支付宝小程序"
+            :disabled="publishStatus == 2 && platformAlipay"
+          ></el-checkbox>
+          <el-checkbox
+            v-model="form.platformWechat"
+            label="微信小程序"
+            :disabled="publishStatus == 2 && platformWechat"
+          ></el-checkbox>
         </el-form-item>
         <el-form-item label="封面：" prop="cover">
           <el-upload
             class="avatar-uploader"
-            :action="baseURL + ''"
+            :action=""
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
+            :disabled="publishStatus == 2"
           >
             <img v-if="form.cover" :src="form.cover" class="avatar" />
             <i v-else class="el-icon-plus avatar-uploader-icon"></i>
@@ -41,7 +60,12 @@
           <div>封面图片为jpg png不支持gif 大小不能超过2MB，建议尺寸：200*140</div>
         </el-form-item>
         <el-form-item label="分类：" prop="categoryId">
-          <el-select style="width: 100%" v-model="form.categoryId" placeholder="请选择分类">
+          <el-select
+            style="width: 100%"
+            v-model="form.categoryId"
+            placeholder="请选择分类"
+            :disabled="publishStatus == 2"
+          >
             <template v-for="{ categoryName, categoryId } in categoryList">
               <el-option
                 :key="categoryId"
@@ -54,34 +78,43 @@
       </el-form>
       <div id="quill-container">
         <slot name="toolbar"></slot>
-        <div ref="editor"></div>
+        <div id="editor" ref="editor"></div>
       </div>
       <el-row class="mt-28">
         <el-button style="margin-left: 100px;s" type="primary" @click="save">保存</el-button>
         <!-- <el-button type="primary" @click="saveHtml">预览</el-button> -->
       </el-row>
-    </wrapper>
+    </div>
   </el-row>
 </template>
 <script>
 import { getUrl } from '@/tools/route';
 import Quill from 'quill';
-// import { ImageDrop } from 'quill-image-drop-module';
 import ImageResize from 'quill-image-resize-module';
-
-// // quill编辑器的字体
-// var fonts = ['Microsoft-YaHei', 'SimSun', 'SimHei', 'KaiTi', 'FangSong', 'Arial', 'Times-New-Roman', 'sans-serif']
-// var Font = Quill.import('formats/font')
-// Font.whitelist = fonts
-// Quill.register(Font, true)
-
 // http://www.ngchina.com.cn/statics/images/index_lunbo/ad_video_2.mp4
 // 这里引入修改过的video模块并注册
 // import Video from './video';
-
-// Quill.register('modules/imageDrop', ImageDrop);
-Quill.register('modules/imageResize', ImageResize);
 // Quill.register(Video, true);
+
+const FontSize = Quill.import('attributors/style/size');
+FontSize.whitelist = [
+  '0.32rem',
+  '0.37rem',
+  '0.4rem',
+  '0.43rem',
+  '0.45rem',
+  '0.48rem',
+  '0.53rem',
+  '0.59rem',
+  '0.64rem',
+  '0.69rem',
+  '0.8rem',
+  '0.96rem',
+  '1.12rem',
+];
+Quill.register(FontSize, true);
+
+Quill.register('modules/imageResize', ImageResize);
 
 export default {
   name: 'quill-editor',
@@ -89,31 +122,33 @@ export default {
     const self = this;
     return {
       baseURL: getUrl(process.env.VUE_APP_API),
-
       articleId: this.$route.query.articleId || '',
-      content: ``,
+      content: '',
+      publishStatus: '',
+      platformApp: false,
+      platformAlipay: false,
+      platformWechat: false,
       options: {
         theme: 'snow',
         boundary: document.body,
         // scrollingContainer: '#scrolling-container',
         modules: {
           toolbar: [
-            ['bold', 'italic', 'underline', 'strike'],
+            [{ size: FontSize.whitelist }],
+            [{ color: [] }, { background: [] }],
+            ['bold', 'italic', 'underline', 'strike', 'blockquote'],
             // ['code-block'],
-            [{ header: 1 }, { header: 2 }],
-            ['blockquote'],
+            // [{ header: 1 }, { header: 2 }],
             [{ list: 'ordered' }, { list: 'bullet' }],
             // [{ script: 'sub' }, { script: 'super' }],
             [{ indent: '-1' }, { indent: '+1' }],
-            [{ direction: 'rtl' }],
-            [{ size: ['small', false, 'large', 'huge'] }],
-            [{ header: [1, 2, 3, 4, 5, 6, false] }],
-            [{ color: [] }, { background: [] }],
-            // [{ font: [] }],
+            // [{ direction: 'rtl' }],
             [{ align: [] }],
-            ['clean'],
+            [{ header: [1, 2, 3, 4, 5, 6, false] }],
+            // [{ font: [] }],
+            // ['clean'],
             // ['link', 'image', 'video'],
-            ['link', 'image'],
+            ['image'],
           ],
           history: {
             delay: 1000,
@@ -183,16 +218,16 @@ export default {
   watch: {
     // content(newVal, oldVal) {
     content(newVal) {
-      if (this.quill) {
-        if (newVal && newVal !== this.content) {
-          // this.content = newVal.replaceAll("tp=webp&amp;","");
-          this.content = newVal;
-          // tp=webp&amp;
-          this.quill.pasteHTML(newVal);
-        } else if (!newVal) {
-          this.quill.setText('');
-        }
-        // this.notifyHostTarget(1000 + document.getElementById('quill-container').offsetHeight);
+      // if (this.quill) {
+      //   if (newVal && newVal !== this.content) {
+      //     this.content = newVal;
+      //     this.quill.pasteHTML(newVal);
+      //   } else if (!newVal) {
+      //     this.quill.setText('');
+      //   }
+      // }
+      if (newVal !== this.quill.root.innerHTML && !this.quill.hasFocus()) {
+        this.quill.root.innerHTML = newVal;
       }
     },
   },
@@ -228,11 +263,6 @@ export default {
       next();
     }
   },
-  // computed: {
-  //   editor() {
-  //     return this.$refs.myQuillEditor.quill;
-  //   },
-  // },
   methods: {
     onInputTitle(value) {
       this.form.title = value.replace(
@@ -242,25 +272,29 @@ export default {
     },
     fetchCategories() {
       this.ajax.get('', {}).then(res => {
-        this.categoryList = res.bizContent.resultList;
+        this.categoryList = res.content.resultList;
       });
     },
     fetchData() {
       this.ajax.get('', { articleId: this.articleId }).then(res => {
-        this.form.title = res.bizContent.title;
-        this.form.author = res.bizContent.author;
-        this.form.categoryId = res.bizContent.categoryId;
-        this.form.cover = res.bizContent.cover;
-        this.form.platformApp = res.bizContent.platformApp;
-        this.form.platformAlipay = res.bizContent.platformAlipay;
-        this.form.platformWechat = res.bizContent.platformWechat;
-        this.content = res.bizContent.content;
+        this.form.title = res.content.title;
+        this.form.author = res.content.author;
+        this.form.categoryId = res.content.categoryId;
+        this.form.cover = res.content.cover;
+        this.platformApp = res.content.platformApp;
+        this.platformAlipay = res.content.platformAlipay;
+        this.platformWechat = res.content.platformWechat;
+        this.form.platformApp = res.content.platformApp;
+        this.form.platformAlipay = res.content.platformAlipay;
+        this.form.platformWechat = res.content.platformWechat;
+        this.publishStatus = res.content.publishStatus;
+        this.content = res.content.content;
 
         this.init();
       });
     },
     handleAvatarSuccess(res) {
-      this.form.cover = res.bizContent.resultList[0].showPath;
+      this.form.cover = res.content.resultList[0].showPath;
     },
     beforeAvatarUpload(file) {
       if (file.type.indexOf('image') === -1) {
@@ -279,28 +313,19 @@ export default {
       return true;
     },
     init() {
-      this.quill = new Quill(this.$refs.editor, this.options);
-      this.quill.enable(true);
-      if (this.content) {
-        this.quill.pasteHTML(this.content);
-      }
+      // document.querySelector('#editor').innerHTML = this.content;
 
-      // this.quill.on('selection-change', range => {
-      //   if (!range) {
-      //     this.onEditorBlur(this.quill);
-      //   } else {
-      //     this.onEditorFocus(this.quill);
-      //   }
-      // });
+      this.quill = new Quill(this.$refs.editor, this.options);
+      this.quill.enable(this.publishStatus !== 2);
+
+      // this.quill.pasteHTML(this.content);
+      this.quill.root.innerHTML = this.content;
 
       // this.quill.on('text-change', (delta, oldDelta, source) => {
       this.quill.on('text-change', () => {
         let html = this.$refs.editor.children[0].innerHTML;
-        // const quill = this.quill;
-        // const text = this.quill.getText();
         if (html === '<p><br></p>') html = '';
         this.content = html;
-        // this.onEditorChange({ html, text, quill: this.quill });
       });
 
       const toolbar = this.quill.getModule('toolbar');
@@ -315,18 +340,13 @@ export default {
           );
           fileInput.classList.add('ql-image');
           fileInput.addEventListener('change', () => {
-            if (fileInput.files != null && fileInput.files[0] != null) {
+            if (this.publishStatus !== 2 && fileInput.files != null && fileInput.files[0] != null) {
               this.uploadToServer(fileInput.files[0], res => {
                 const range = this.quill.getSelection();
                 if (range) {
                   fileInput.value = null;
                   //  在当前光标位置插入图片
-                  toolbar.quill.insertEmbed(
-                    range.index,
-                    'image',
-                    // this.$ajax.defaults.baseURL + res.file.path
-                    res.file.path
-                  );
+                  toolbar.quill.insertEmbed(range.index, 'image', res.file.path);
                   //  将光标移动到图片后面
                   toolbar.quill.setSelection(range.index + 1);
                 }
@@ -340,58 +360,15 @@ export default {
       });
     },
     uploadToServer(file, callback) {
-      // callback({
-      //   file: {
-      //     path:
-      //       'https://mmbiz.qpic.cn/mmbiz_gif/jEv515Ev56FADtelcoPZ6lhW87T8oEoOGPkwTZia89y67qlgTrwVQ3WXxIiabQuMqJj0L42Tq7uDuX1Xa9KOuiaDA/640?wx_fmt=gif&tp=webp&wxfrom=5&wx_lazy=1',
-      //   },
-      // });
       const formData = new FormData();
       formData.append('upload', file);
       this.ajax.post('', formData).then(res => {
         callback({
           file: {
-            path: res.bizContent.resultList[0].showPath,
+            path: res.content.resultList[0].showPath,
           },
         });
       });
-    },
-    // onEditorReady(editor) {
-    //   // 准备编辑器
-    // },
-    // onEditorBlur() {}, // 失去焦点事件
-    // onEditorFocus() {}, // 获得焦点事件
-    // onEditorChange(editor) {}, // 内容改变事件
-    // saveHtml(event) {
-    //   console.log(this.content);
-    //   console.log('-------------------------------');
-    //   console.log(this.content.replace(/tp=webp&amp;/, ''));
-    // },
-    emitImageInfo($event) {
-      const resetUploader = function() {
-        const uploader = document.getElementById('file-upload');
-        uploader.value = '';
-      };
-      const file = $event.target.files[0];
-      const Editor = this.quill;
-      const range = Editor.getSelection();
-      const cursorLocation = range.index;
-
-      const formData = new FormData();
-      formData.append('image', file);
-
-      this.ajax
-        .post('https://fakeapi.yoursite.com/images', {
-          data: formData,
-        })
-        .then(res => {
-          // const url = res.data.url; // Get url from response
-          Editor.insertEmbed(cursorLocation, 'image', res.data.url);
-          resetUploader();
-        })
-        .catch(() => {
-          // console.log(err);
-        });
     },
     validate() {
       return new Promise((resolve, reject) => {
@@ -406,6 +383,7 @@ export default {
       });
     },
     green() {
+      this.cleanSensitiveWords();
       const self = this;
       return new Promise((resolve, reject) => {
         self.ajax
@@ -413,20 +391,38 @@ export default {
             content: self.content.replace(/tp=webp&amp;/, ''),
           })
           .then(res => {
-            if (!res.bizContent.green) {
+            if (!res.content.green) {
               let errorTip = '';
-              for (let i = 0, len = res.bizContent.messages.length; i < len; i++) {
-                const message = res.bizContent.messages[i];
+              let sensitiveWordsList = [];
+              for (let i = 0, len = res.content.messages.length; i < len; i++) {
+                const message = res.content.messages[i];
                 const hintWords = message.hintWords.join(',');
+                for (let j = 0, jLen = message.hintWords.length; j < jLen; j++) {
+                  sensitiveWordsList = sensitiveWordsList.concat(message.hintWords[j].split(' '));
+                }
                 errorTip += `${message.suggestion}:${message.label};敏感词:${hintWords}`;
               }
               self.$message.error({ message: errorTip, duration: 10000 });
+
+              this.markSensitiveWords(sensitiveWordsList);
               reject();
             } else {
               resolve();
             }
           });
       });
+    },
+    markSensitiveWords(wordsList) {
+      const sensitiveWordsList = [...new Set(wordsList)];
+      for (let i = 0, len = sensitiveWordsList.length; i < len; i++) {
+        const reg = new RegExp(`(${sensitiveWordsList[i]})`, 'gim');
+        this.content = this.content.replace(reg, "<em class='sensitive'>$1</em>");
+      }
+      this.quill.root.innerHTML = this.content;
+    },
+    cleanSensitiveWords() {
+      this.content = this.content.replace(/<em class="sensitive">(.+?)<\/em>/gim, '$1');
+      this.quill.root.innerHTML = this.content;
     },
     save() {
       const self = this;
@@ -440,13 +436,13 @@ export default {
                 content: self.content.replace(/tp=webp&amp;/g, '').replace(/&amp;tp=webp/g, ''),
               })
               .then(res => {
-                // if (res.bizContent.result) {
+                // if (res.content.result) {
                 self.$message.success('保存成功!');
                 setTimeout(() => {
-                  self.$router.push(`/article/detail?articleId=${res.bizContent.articleId}`);
+                  self.$router.push(`/article/detail?articleId=${res.content.articleId}`);
                 }, 1000);
                 // } else {
-                //   self.$message.error(res.bizContent.message);
+                //   self.$message.error(res.content.message);
                 // }
               });
           },
@@ -469,7 +465,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .specification {
   height: 40px;
   line-height: 40px;
@@ -479,51 +475,165 @@ export default {
   color: rgb(2, 167, 240);
   text-decoration: none;
 }
-.avatar-uploader .el-upload {
+.avatar-uploader /deep/ .el-upload {
   border: 1px dashed #d9d9d9;
   border-radius: 6px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
 }
-.avatar-uploader .el-upload:hover {
+.avatar-uploader /deep/ .el-upload:hover {
   border-color: #409eff;
 }
 .avatar-uploader-icon {
   font-size: 28px;
   color: #8c939d;
-  width: 178px;
-  height: 178px;
-  line-height: 178px;
+  width: 200px;
+  height: 140px;
+  line-height: 140px;
   text-align: center;
 }
 .avatar {
-  width: 178px;
-  height: 178px;
+  width: 200px;
+  height: 140px;
   display: block;
+}
+</style>
+<style>
+html {
+  font-size: 37.5px;
 }
 </style>
 <style lang="less" scoped>
 @import '~quill/dist/quill.core.css';
 @import '~quill/dist/quill.snow.css';
 
+/deep/ .sensitive {
+  color: red;
+  font-weight: bold;
+  text-decoration: line-through;
+  font-size: 20px;
+  background-color: #eee;
+  font-style: normal;
+}
 .ql-container {
   font-family: 'pingFang SC', 'pingFang', 'Microsoft YaHei', 'Helvetica Neue', Helvetica,
     'Hiragino Sans GB', Arial, sans-serif;
   height: 800px;
+  white-space: pre;
+  font-size: 15px;
 }
 #quill-container {
   margin-left: 100px;
 }
-/* #quill-container {
-  background-color: #fff;
-  height: 400px;
-  min-height: 100%;
-} */
-/* #quill-container .ql-editor {
-  font-size: 18px;
-  overflow-y: visible;
-  height: auto;
-  min-height: 10rem auto;
-} */
+
+/deep/ .ql-snow {
+  .ql-picker.ql-size {
+    width: 60px;
+  }
+  .ql-picker.ql-header {
+    width: 88px;
+  }
+}
+
+/deep/ .ql-snow .ql-picker.ql-header {
+  .ql-picker-label::before,
+  .ql-picker-item::before {
+    content: '普通文本';
+  }
+  .ql-picker-label[data-value='1']::before,
+  .ql-picker-item[data-value='1']::before {
+    content: '标题 1';
+  }
+  .ql-picker-label[data-value='2']::before,
+  .ql-picker-item[data-value='2']::before {
+    content: '标题 2';
+  }
+  .ql-picker-label[data-value='3']::before,
+  .ql-picker-item[data-value='3']::before {
+    content: '标题 3';
+  }
+  .ql-picker-label[data-value='4']::before,
+  .ql-picker-item[data-value='4']::before {
+    content: '标题 4';
+  }
+  .ql-picker-label[data-value='5']::before,
+  .ql-picker-item[data-value='5']::before {
+    content: '标题 5';
+  }
+  .ql-picker-label[data-value='6']::before,
+  .ql-picker-item[data-value='6']::before {
+    content: '标题 6';
+  }
+}
+/deep/ .ql-snow .ql-picker.ql-size {
+  .ql-picker-label[data-value='0.32rem']::before,
+  .ql-picker-item[data-value='0.32rem']::before {
+    content: '12px';
+    font-size: 12px;
+  }
+  .ql-picker-label[data-value='0.37rem']::before,
+  .ql-picker-item[data-value='0.37rem']::before {
+    content: '14px';
+    font-size: 14px;
+  }
+  .ql-picker-label[data-value='0.4rem']::before,
+  .ql-picker-item[data-value='0.4rem']::before {
+    content: '15px';
+    font-size: 15px;
+  }
+  .ql-picker-label[data-value='0.43rem']::before,
+  .ql-picker-item[data-value='0.43rem']::before {
+    content: '16px';
+    font-size: 16px;
+  }
+  .ql-picker-label[data-value='0.45rem']::before,
+  .ql-picker-item[data-value='0.45rem']::before {
+    content: '17px';
+    font-size: 17px;
+  }
+  .ql-picker-label[data-value='0.48rem']::before,
+  .ql-picker-item[data-value='0.48rem']::before {
+    content: '18px';
+    font-size: 18px;
+  }
+  .ql-picker-label[data-value='0.53rem']::before,
+  .ql-picker-item[data-value='0.53rem']::before {
+    content: '20px';
+    font-size: 20px;
+  }
+  .ql-picker-label[data-value='0.59rem']::before,
+  .ql-picker-item[data-value='0.59rem']::before {
+    content: '22px';
+    font-size: 22px;
+  }
+  .ql-picker-label[data-value='0.64rem']::before,
+  .ql-picker-item[data-value='0.64rem']::before {
+    content: '24px';
+    font-size: 24px;
+  }
+  .ql-picker-label[data-value='0.69rem']::before,
+  .ql-picker-item[data-value='0.69rem']::before {
+    content: '26px';
+    font-size: 26px;
+  }
+  .ql-picker-label[data-value='0.8rem']::before,
+  .ql-picker-item[data-value='0.8rem']::before {
+    content: '30px';
+    font-size: 30px;
+  }
+  .ql-picker-label[data-value='0.96rem']::before,
+  .ql-picker-item[data-value='0.96rem']::before {
+    content: '36px';
+    font-size: 36px;
+  }
+  .ql-picker-label[data-value='1.12rem']::before,
+  .ql-picker-item[data-value='1.12rem']::before {
+    content: '42px';
+    font-size: 42px;
+  }
+  .ql-picker-label::before {
+    font-size: 15px !important;
+  }
+}
 </style>

@@ -7,10 +7,7 @@
       </div>
       <!-- 文章切换loading -->
       <van-overlay :show="vanLoading">
-        <img
-          class="kangaroo"
-          src="loading.gif"
-        />
+        <img class="kangaroo" src="XX.gif" />
         <!-- <van-loading type="spinner" color="rgba(255, 149, 67, 1)" />-->
       </van-overlay>
 
@@ -29,7 +26,7 @@
           </div>
         </div>
 
-        <div ref="editor" id="editor"></div>
+        <div id="editor" class="ql-editor"></div>
 
         <div class="desc-wrap bottom-desc-wrap">
           <div class="desc">
@@ -75,12 +72,12 @@
 </template>
 
 <script>
+import Quill from "quill";
 import { Skeleton, Overlay, Loading } from "vant";
 import lottie from "lottie-web";
+// import { BridgeClient } from "@/utils/tools.js";
 // import * as animationData from "../../assets/article/collect/collect.json";
 // import animationData from "../../assets/article/collect/json.js";
-
-import Quill from "quill";
 
 export default {
   name: "article-index",
@@ -149,17 +146,12 @@ export default {
     },
     init() {
       this.$nextTick(() => {
-        document.querySelector("#editor").innerHTML = this.article.content;
-        // this.quill = new Quill("#editor", this.options);
-        this.quill = new Quill(this.$refs.editor, this.options);
+        this.quill = new Quill("#editor", this.options);
         this.quill.enable(false);
-        // if (this.article.content) {
-        // this.quill.pasteHTML(this.article.content || "");
+        document.querySelector("#editor").innerHTML = this.article.content;
         setTimeout(() => {
           this.vanLoading = false;
         }, 1000);
-
-        // }
       });
     },
     fetchData() {
@@ -172,10 +164,19 @@ export default {
           res => {
             this.skeletonLoading = false;
 
-            this.article = res.data.bizContent;
-            if (!res.data.bizContent.withdrawn) {
+            this.article = res.data.content;
+            if (!res.data.content.withdrawn) {
               this.init();
             }
+            // BridgeClient(
+            //   "call",
+            //   "UpdateArticleReadCount",
+            //   {
+            //     articleId: res.data.content.articleId,
+            //     readCount: res.data.content.readCount
+            //   },
+            //   function(data) {}
+            // );
           },
           () => {}
         );
@@ -230,7 +231,9 @@ export default {
     "Helvetica Neue", Helvetica, "Hiragino Sans GB", "Microsoft YaHei", Arial,
     sans-serif;
   font-size: 15px;
-  white-space: pre;
+}
+/deep/ .ql-editor img {
+  max-width: 100%;
 }
 .van-overlay {
   background-color: #fff;
