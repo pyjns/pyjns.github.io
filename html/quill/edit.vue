@@ -415,8 +415,10 @@ export default {
     markSensitiveWords(wordsList) {
       const sensitiveWordsList = [...new Set(wordsList)];
       for (let i = 0, len = sensitiveWordsList.length; i < len; i++) {
-        const reg = new RegExp(`(${sensitiveWordsList[i]})`, 'gim');
-        this.content = this.content.replace(reg, "<em class='sensitive'>$1</em>");
+        if (sensitiveWordsList[i]) {
+          const reg = new RegExp(`(${sensitiveWordsList[i]})`, 'gim');
+          this.content = this.content.replace(reg, '<em class="sensitive">$1</em>');
+        }
       }
       this.quill.root.innerHTML = this.content;
     },
