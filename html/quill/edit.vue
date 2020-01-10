@@ -77,6 +77,7 @@
         </el-form-item>
       </el-form>
       <div id="quill-container">
+        <span @click="detectGreen" class="detectGreen">检测敏感词</span>
         <slot name="toolbar"></slot>
         <div id="editor" ref="editor"></div>
       </div>
@@ -382,29 +383,34 @@ export default {
         });
       });
     },
+    detectGreen() {
+      this.green().catch(() => {});
+    },
     green() {
       this.cleanSensitiveWords();
       const self = this;
       return new Promise((resolve, reject) => {
         self.ajax
           .post('', {
-            content: self.content.replace(/tp=webp&amp;/, ''),
+            content: self.content,
           })
           .then(res => {
-            if (!res.content.green) {
+            if (!res.bizContent.green) {
               let errorTip = '';
               let sensitiveWordsList = [];
-              for (let i = 0, len = res.content.messages.length; i < len; i++) {
-                const message = res.content.messages[i];
+              for (let i = 0, len = res.bizContent.messages.length; i < len; i++) {
+                const message = res.bizContent.messages[i];
                 const hintWords = message.hintWords.join(',');
                 for (let j = 0, jLen = message.hintWords.length; j < jLen; j++) {
-                  sensitiveWordsList = sensitiveWordsList.concat(message.hintWords[j].split(' '));
+                  // sensitiveWordsList = sensitiveWordsList.concat(message.hintWords[j].split(' '));
+                  sensitiveWordsList = sensitiveWordsList.concat(message.hintWords[j]);
+                  this.newMarkSensitiveWords(message.hintWords[j]);
                 }
                 errorTip += `${message.suggestion}:${message.label};敏感词:${hintWords}`;
               }
               self.$message.error({ message: errorTip, duration: 10000 });
-
-              this.markSensitiveWords(sensitiveWordsList);
+              this.quill.root.innerHTML = this.content;
+              // this.markSensitiveWords(sensitiveWordsList);
               reject();
             } else {
               resolve();
@@ -425,6 +431,29 @@ export default {
     cleanSensitiveWords() {
       this.content = this.content.replace(/<em class="sensitive">(.+?)<\/em>/gim, '$1');
       this.quill.root.innerHTML = this.content;
+    },
+    newMarkSensitiveWords(hint) {
+      const hintList = hint.split(' ');
+      let regStr = '';
+      for (let i = 0, len = hintList.length; i < len; i++) {
+        if (/[\u4e00-\u9fa5]/.test(hintList[i])) {
+          regStr += `(${hintList[i]})`;
+        }
+        if (i < len - 1) {
+          regStr += '([^\\u4e00-\\u9fa5]+)';
+        }
+      }
+
+      const reg = new RegExp(regStr, '');
+      const resultList = Array.from(reg.exec(this.content) || []);
+
+      let sensitive = '';
+      for (let i = 1, l = resultList.length; i < l; i++) {
+        sensitive += /[\u4e00-\u9fa5]/.test(resultList[i])
+          ? `<em class="sensitive">${  resultList[i]  }</em>`
+          : resultList[i];
+      }
+      this.content = this.content.replace(resultList[0], sensitive);
     },
     save() {
       const self = this;
@@ -511,12 +540,12 @@ html {
 @import '~quill/dist/quill.snow.css';
 
 /deep/ .sensitive {
-  color: red;
-  font-weight: bold;
-  text-decoration: line-through;
-  font-size: 20px;
-  background-color: #eee;
-  font-style: normal;
+  color: red !important;
+  font-weight: bold !important;
+  text-decoration: line-through !important;
+  font-size: 20px !important;
+  background-color: #eee !important;
+  font-style: normal !important;
 }
 .ql-container {
   font-family: 'pingFang SC', 'pingFang', 'Microsoft YaHei', 'Helvetica Neue', Helvetica,
@@ -527,6 +556,19 @@ html {
 }
 #quill-container {
   margin-left: 100px;
+  min-width: 750px;
+  position: relative;
+}
+.detectGreen {
+  position: absolute;
+  color: #02a7f0;
+  right: 16px;
+  font-size: 14px;
+  top: 13px;
+  cursor: pointer;
+}
+.detectGreen:hover {
+  color: #06c;
 }
 
 /deep/ .ql-snow {
