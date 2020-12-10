@@ -6,13 +6,35 @@
     <title>导航页</title>
     <style>
       body{
+        position: relative;
         background-color: rgba(55,59,64);
         width: 100vw;
         height: 100vh;
+        color: #fff;
+      }
+      section{
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+      a{
+        color: #fff;
+        display: block;
+        text-align: center;
+        text-decoration: none;
+        margin: 10px;
       }
     </style>
   </head>
   <body>
-    
+    <section>
+      <a href="./browser/browser.md">浏览器的响应步骤</a>
+      <a href="./js/date.md">获取月份的天数</a>
+      <a href="./js/calculate.md">精准计算</a>
+      <a href="./js/algorithm.md">算法</a>
+      <a href="./html/quill/quill.html">富文本编辑器quill</a>
+      <a href="./js/gather.md">其他</a>
+    </section>
   </body>
 </html>
