@@ -48,18 +48,21 @@ XMLHttpRequest和Fetch API都遵循同源策略
 
 ####HTTP Headers
 ```
-User-Agent：用户代理的特征字符串
-Authorization：服务器验证用户代理的凭证
-Set-Cookie：服务端发送cookies到用户代理
-Cookie：用户代理存储的cookie
-Accept：用户代理请求时期望接受的数据类型
-Content-Type：服务器响应的数据类型
-Cache-Control：指定缓存机制
-Origin：获取数据的来源
-Access-Control-Allow-Origin：响应是否可以共享（Origin）
-Connection：控制网络连接是否保持打开
-Keep-Alive：指定持久连接保持打开的时间
-Referer：跳转到当前页的来源网页地址
+  User-Agent：用户代理的特征字符串
+  Authorization：服务器验证用户代理的凭证
+  Set-Cookie：服务端发送cookies到用户代理
+  Cookie：用户代理存储的cookie
+  Accept：用户代理请求时期望接受的数据类型
+  Content-Type：服务器响应的数据类型
+                application/json
+                application/x-www-form-urlencoded
+                application/xml
+  Cache-Control：指定缓存机制
+  Origin：获取数据的来源
+  Access-Control-Allow-Origin：响应是否可以共享（Origin）
+  Connection：控制网络连接是否保持打开
+  Keep-Alive：指定持久连接保持打开的时间
+  Referer：跳转到当前页的来源网页地址
 ```
 
 ####HTTP 缓存
