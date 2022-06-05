@@ -1,0 +1,74 @@
+<html>
+
+<head></head>
+
+<body>
+
+  <div id="container">
+    <section>
+      <h3>demo 1</h3>
+
+      <div class="sampleForm">
+        <label for="twitter_handle">User:</label>
+        <input type="text" id="twitter_handle" value="user" />
+
+        <label for="movie_seen">Name:</label>
+        <input type="text" id="movie_seen" value="movie" />
+
+        <label for="movie_rating">Rate:</label>
+        <select id="movie_rating">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5" selected>5</option>
+        </select>
+
+        <button id="add">Submit rating</button>
+      </div>
+
+      <div class="summaryTable">
+
+        <div>
+          <h3>Recent users</h3>
+          <ul id="users"></ul>
+        </div>
+
+        <div>
+          <h3>Recent movies rated</h3>
+          <ul id="ratings"></ul>
+        </div>
+
+      </div>
+    </section>
+
+    <section>
+      <h3>demo 2</h3>
+
+      <input type="text" name="tag" id="query" />
+      <input id="flickrSearch" type="submit" name="submit" value="submit" />
+
+      <div id="lastQuery"></div>
+
+      <ol id="searchResults"></ol>
+
+    </section>
+  </div>
+
+  <script src="./pubsub.js"></script>
+
+  <!-- demo1 -->
+  <script src="./logger.js"></script>
+
+  <!-- demo2 -->
+  <script src="./stock.js"></script>
+
+  <!-- demo3 -->
+  <script src="./rate.js"></script>
+
+  <!-- demo4 -->
+  <script src="./query.js"></script>
+
+</body>
+
+</html>

@@ -39,8 +39,8 @@
 ```  
 手机端 能调起 相册 和 相机
 ```
-  <input type="file" value="点击上传图片" name="theFile" accept="image/*" capture>
-```  
+    <input type="file" value="点击上传图片" name="theFile" accept="image/*" capture>
+```
 清除 select 默认样式
 ```
  -webkit-appearance:none;

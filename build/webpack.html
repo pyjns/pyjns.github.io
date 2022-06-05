@@ -1,0 +1,27 @@
+<html>
+
+<head>
+  <script>
+
+
+    (function (list) {
+      function require(file) {
+        let exports = {};
+        eval(list[file]);
+        return exports;
+      }
+
+      require("index.js");
+    })({
+      "add.js": "exports.default = function add(a, b) { return a + b }",
+      "index.js": "console.log(require('add.js').default(3, 2))"
+    })
+
+  </script>
+</head>
+
+<body>
+  <div>webpack</div>
+</body>
+
+</html>
