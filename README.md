@@ -5,5 +5,5 @@
 [精准计算](./js/calculate.md)  
 [算法](./js/algorithm.md)  
 [富文本编辑器quill](./html/quill/quill.md)  
-[富文本编辑器quill](./blog/wechat.md)  
+[微信小程序开发](./blog/wechat.md)  
 [其他](./js/gather.md)  
