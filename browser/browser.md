@@ -3,9 +3,10 @@
 ### 1.DNS寻址
   **DNS（Domain Name System） 域名系统 ：**域名和IP地址相互映射的一个分布式数据库，目的是能更方便地访问互联网
 
-### 2.TCP 握手
+### 2.TCP 握手 （三次握手，四次挥手）
   **TCP (Transmission Control Protocol) 传输控制协议：** 获取到服务器IP地址后，浏览器会通过TCP”三次握手“与服务器建立连接，此机制目的是在两端传输数据之前，通过上层协议Https可以协商网络TCP套接字连接的一些参数。
-  三次握手（SYN, SYN-ACK, ACK）建立连接，四次挥手断开连接。
+  三次握手（SYN, SYN-ACK, ACK）建立连接，
+  四次挥手（FIN, ACK）断开连接。
 
 ### 3.TLS 协商
   **TLS（Transport Layer Security）传输层安全：**前身是安全套接层SSL(Secure Sockets Layer )，TLS协议要求服务器提供有效的数字证书来确认身份，以建立安全连接，防止第三方篡改及监听。
