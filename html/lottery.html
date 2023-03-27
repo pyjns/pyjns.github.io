@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>lottery</title>
+    <style>
+      section {
+        font-size: 60px;
+      }
+      p {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <span>排3：</span>
+      <span id="sports3"></span>
+    </section>
+    <section>
+      <span>大乐透：</span>
+      <p id="sports"></p>
+    </section>
+    </br>
+    <section>
+      <span>3D：</span>
+      <span id="welfare3"></span>
+    </section>
+    <section>
+      <span>双色球：</span>
+      <p id="welfare"></p>
+    </section>
+    <script>
+      function getRandomIntInclusive(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min; //含最大值，含最小值
+      }
+
+      function getLottery3() {
+        let array = [];
+        for (let i = 0; i < 3; i++) {
+          array.push(getRandomIntInclusive(0, 9))
+        }
+        return array.join(" ")
+      }
+
+      function getWelfare() {
+        let array = [];
+        for (let i = 0; i < 6; i++) {
+          let num = getRandomIntInclusive(1, 33);
+          while(array.includes(num)){
+            num = getRandomIntInclusive(1, 33)
+          }
+          array.push(num)
+        }
+        array = array.sort((a, b) => a - b);
+        array.push(getRandomIntInclusive(1, 16))
+        return array.join(" , ")
+      }
+
+      function getSports() {
+        let array = [];
+        for (let i = 0; i < 5; i++) {
+          let num = getRandomIntInclusive(1, 35);
+          while(array.includes(num)){
+            num = getRandomIntInclusive(1, 33)
+          }
+          array.push(num)
+        }
+        array = array.sort((a, b) => a - b);
+        array = array.concat([getRandomIntInclusive(1, 12),getRandomIntInclusive(1, 12)].sort((a, b) => a - b))
+        return array.join(" , ")
+      }
+      document.getElementById("welfare3").textContent = getLottery3();
+      document.getElementById("sports3").textContent = getLottery3();
+      document.getElementById("welfare").textContent = getWelfare();
+      document.getElementById("sports").textContent = getSports();
+
+    </script>
+
+  </body>
+</html>
