@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="format-detection" content="telephone=no">
+
+</head>
+
+<body>
+  <div id="app">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+
+      <path d="M10, 10 L50, 10" stroke="red" class="animated" stroke-width="1" style="stroke-width: 1.5;"></path>
+
+    </svg>
+
+  </div>
+
+  <style>
+    .animated {
+      stroke-dasharray: 5;
+      /* stroke-dashoffset: 10; */
+      animation: dashdraw 5s linear infinite
+    }
+
+    @keyframes dashdraw {
+      0% {
+        stroke-dashoffset: 10
+      }
+    }
+  </style>
+
+  <script>
+    const bucket = new WeakMap(); // 存储副作用函数的桶
+    const data = { text: 'hello world', foo: true, bar: true, num: 1, budget: { count: 1 } };
+
+    const obj = new Proxy(data, {
+      //拦截读取操作
+      get(target, key) {
+        track(target, key); // 将当前激活的副作用函数(activeEffect中存储的副作用函数)收集到‘桶’中
+        return target[key]; //返回属性值
+      },
+      // 拦截设置操作
+      set(target, key, newVal) {
+        target[key] = newVal; // 设置属性值
+        trigger(target, key); // 把副作用函数从桶里取出并执行
+        return true; // 返回true代表设置操作成功
+      },
+    });
+
+    // 在 get 拦截函数内调用 track 函数追踪变化
+    function track(target, key) {
+      if (activeEffect) {
+        // 根据target从‘桶’中取得depsMap，WeakMap(target：Map(key：Set(effectFn...)))
+        let depsMap = bucket.get(target);
+        if (!depsMap) {
+          bucket.set(target, (depsMap = new Map()))
+        }
+        // 根据key从depsMap中取得deps，Set类型：effects
+        let deps = depsMap.get(key);
+        if (!deps) {
+          depsMap.set(key, (deps = new Set()))
+        }
+        // 收集副作用函数：将当前激活的副作用函数(activeEffect中存储的副作用函数)收集到‘桶’中
+        deps.add(activeEffect)
+        // 收集依赖集合：将收集当前副作用函数的依赖集合 deps(Set(effectFn...))添加到：当前副作用函数的数组属性(收集依赖集合)中：activeEffect.deps 
+        activeEffect.deps.push(deps);
+      }
+    }
+
+    // 在 set 拦截函数内调用 trigger 函数触发变化
+    function trigger(target, key) {
+      // 根据target从桶中取得depsMap(key->Set(effectssFn...))
+      const depsMap = bucket.get(target)
+      if (depsMap) {
+        // 根据key取得所有副作用函数effects
+        const effects = depsMap.get(key)
+        // 解决无限执行问题：遍历中删除又被添加的元素依然会被访问
+        const effectsToRun = new Set(effects)
+        // 执行副作用函数
+        effectsToRun && effectsToRun.forEach(effectFn => {
+          // 解决自增++(effect( () => obj.num = obj.num + 1 ) )导致无限递归自身调用问题;
+          // 如果 trigger 触发执行的副作用函数与当前正在执行的副作用函数相同则不触发执行
+          if (effectFn != activeEffect) {
+            if (effectFn.options.scheduler) {
+              // 优先判断调度器执行，将副作用函数作为参数传入，由用户自行控制执行，
+              effectFn.options.scheduler(effectFn);
+            } else {
+              // 默认直接执行副作用函数 
+              effectFn();
+            }
+          }
+        })
+      }
+    }
+
+    // 解除副作用函数的关联依赖集合
+    function cleanup(effectFn) {
+      // 遍历副作用函数的 effectFn.deps(收集的依赖集合)
+      for (let i = 0; i < effectFn.deps.length; i++) {
+        const deps = effectFn.deps[i]; // deps是依赖集合
+        deps.delete(effectFn); // 解除副作用函数的关联依赖集合：将 effectFn 从依赖集合 deps 中移除
+      }
+      effectFn.deps.length = 0; // 重置 effectFn.deps(收集依赖集合) 数组
+    }
+
+    // 全局变量：存储通过 effect 函数注册的(当前激活的)副作用函数
+    let activeEffect;
+    // 全局 effect 栈
+    const effectStack = [];
+
+    //effect函数：用于注册副作用函数，进行依赖收集
+    function effect(fn, options = {}) {
+      //包装副作用函数
+      const effectFn = () => {
+        // 将副作用函数从关联的依赖集合中移除
+        cleanup(effectFn);
+        // 当 effectFn 执行时，使用全局变量 activeEffect存储：当前激活的副作用函数 effectFn
+        activeEffect = effectFn;
+        // 在调用副作用函数之前将当前副作用函数压入栈中
+        effectStack.push(effectFn)
+        // 执行副作用函数，进行依赖收集
+        const res = fn(); // 将fn的执行结果存储到 res 中
+        // 在当前副作用函数执行完毕后，将当前副作用函数弹出栈
+        effectStack.pop();
+        // 把 activeEffect 还原为之前的值
+        activeEffect = effectStack[effectStack.length - 1];
+        // 将 fn的返回值res 作为 effectFn 的返回值
+        return res;
+      }
+      // 将 options 选项挂载到 effectFn 上
+      effectFn.options = options;
+      // effectFn.deps 用来存储所有与该副作用函数相关联的依赖集合
+      effectFn.deps = [];
+
+      // 只有非 lazy 时之行
+      if (!options.lazy) {
+        effectFn(); //执行包装副作用函数
+      }
+
+      return effectFn; // 返回副作用函数
+    }
+
+    // 任务队列去重
+    const jobQueue = new Set();
+    // 创建promise实例，用于将任务添加到微任务队列
+    const p = Promise.resolve();
+    // 标志是否在刷新队列
+    let isFlushing = false;
+    function flushJob() {
+      if (isFlushing) return; // 如果标识为true直接返回
+      isFlushing = true; // 表示刷新状态
+      // 添加刷新任务到微任务队列
+      p.then(() => {
+        jobQueue.forEach(job => job())
+      }).finally(() => {
+        isFlushing = false; // 表示刷新状态
+      })
+    }
+
+    // 计算属性
+    function computed(getter) {
+      let value; // 缓存上一次计算的值
+      let dirty = true; // 标识为 true 时需要重新计算
+      // 把 getter 作为副作用函数，创建一个lazy的effect
+      const effectFn = effect(getter, {
+        lazy: true,
+        // 调度器中将 dirty 重置为 true
+        scheduler() {
+          if (!dirty) {
+            dirty = true;
+            // 当计算属性依赖的响应式数据变化时，手动调用 trigger 函数触发响应
+            trigger(obj, 'sum')
+          }
+        }
+      })
+      // 当读取 sum 时,触发副作用函数执行
+      return {
+        get sum() {
+          if (dirty) {
+            value = effectFn()
+            dirty = false;
+          }
+          // 当读取 sum 时，手动调用 track 进行追踪
+          track(obj, 'sum')
+          return value;
+        }
+      }
+    }
+
+    function traverse(source) {
+      for (const k in source) {
+        source[k]
+      }
+    }
+
+    function watch(source, cb) {
+      effect(
+        () => traverse(source), // 触发读取操作从而建立联系
+        {
+          scheduler() {
+            cb(); // 当数据变化时调用回调函数cb
+          }
+        }
+      )
+    }
+
+    watch(obj, () => {
+      console.log("数据变化了")
+    })
+    obj.num++
+
+
+    // 计算属性：懒执行 + 读取属性时触发副作用函数执行依赖收集并返回结果
+    // 读取对象属性值sum时 -> 触发对象的访问器属性get num(){...} -> 触发包装副作用函数 effectFn 执行进行依赖收集 -> 触发真实副作用函数 getter 执行并返回执行结果
+    // const sumRes = computed(() => obj.foo + "-" + obj.bar)
+    // console.log("--value--", sumRes.sum)
+    // obj.foo = false;
+    // console.log("--value--", sumRes.sum)
+
+    // const sumRes = computed(() => obj.foo + "-" + obj.bar)
+    // effect(() => { console.log(sumRes.sum) })
+    // obj.foo = false;
+
+
+    // 调度执行-去重不过渡
+    // effect(() => {
+    //   console.log(obj.num)
+    // }, {
+    //   scheduler(fn) {
+    //     // 每次调度时，将副作用函数添加到jobQueue队列中
+    //     jobQueue.add(fn)
+    //     // 调用 flushJob 刷新队列
+    //     flushJob()
+    //   }
+    // })
+    // 调度执行-宏任务执行时间
+    // effect(() => {
+    //   console.log(obj.num)
+    // }, {
+    //   scheduler(fn) {
+    //     // 将副作用函数放到宏任务队列中执行
+    //     setTimeout(fn)
+    //   }
+    // })
+    // effect(() => {
+    //   console.log(obj.num)
+    // })
+    // obj.num++
+    // obj.num++
+    // obj.num++
+    // obj.num++
+
+    // let temp1, temp2;
+    // //注册副作用函数
+    // effect(function effectFn1() {
+    //   obj.num++
+    // })
+    // setTimeout(() => {
+    //   obj.bar = false
+    //   obj.foo = false
+    //   console.log(bucket)
+    //   console.log("----temp1, temp2-----", temp1, temp2)
+    // }, 2000)
+
+    // //注册副作用函数
+    // effect(function effectFn1() {
+    //   console.log("effectFn1 执行")
+    //   effect(function effectFn2() {
+    //     console.log("effectFn2 执行")
+    //     temp2 = obj.bar;
+    //   })
+    //   temp1 = obj.foo;
+    // })
+    // setTimeout(() => {
+    //   obj.bar = false
+    //   obj.foo = false
+    //   console.log(bucket)
+    //   console.log("----temp1, temp2-----", temp1, temp2)
+    // }, 2000)
+
+    // setTimeout(() => {
+    //   console.log(bucket)
+    //   obj.text = "hello vue"
+    // }, 2000)
+  </script>
+
+</body>
+
+</html>

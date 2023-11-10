@@ -1,84 +1,194 @@
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>lottery</title>
-    <style>
-      section {
-        font-size: 60px;
-      }
-      p {
-        margin: 0;
-      }
-    </style>
-  </head>
-  <body>
-    <section>
-      <span>排3：</span>
-      <span id="sports3"></span>
-    </section>
-    <section>
-      <span>大乐透：</span>
-      <p id="sports"></p>
-    </section>
-    </br>
-    <section>
-      <span>3D：</span>
-      <span id="welfare3"></span>
-    </section>
-    <section>
-      <span>双色球：</span>
-      <p id="welfare"></p>
-    </section>
-    <script>
-      function getRandomIntInclusive(min, max) {
-        min = Math.ceil(min);
-        max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min + 1)) + min; //含最大值，含最小值
-      }
 
-      function getLottery3() {
-        let array = [];
-        for (let i = 0; i < 3; i++) {
-          array.push(getRandomIntInclusive(0, 9))
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <title>lottery</title>
+  <style>
+    section {
+      font-size: 20px;
+    }
+
+    p {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .wrapper {
+      display: grid;
+      grid-template-columns: 1fr 9fr;
+      grid-template-rows: 10% 80% 10%;
+      grid-template-areas: "header header"
+        "sidebar main"
+        "footer footer";
+    }
+
+    #page {
+      display: grid;
+      width: 100%;
+      height: 200px;
+      grid-template:
+        [header-left] "head head" 30px [header-right] [main-left] "nav  main" 1fr [main-right] [footer-left] "nav  foot" 30px [footer-right] / 120px 1fr;
+    }
+
+    header {
+      background-color: lime;
+      grid-area: head;
+    }
+
+    nav {
+      background-color: lightblue;
+      grid-area: nav;
+    }
+
+    main {
+      background-color: yellow;
+      grid-area: main;
+    }
+
+    footer {
+      background-color: red;
+      grid-area: foot;
+    }
+
+    .container {
+      column-width: 250px;
+      column-gap: 20px;
+    }
+
+    .card {
+      background-color: rgb(207, 232, 220);
+      border: 2px solid rgb(79, 185, 227);
+      padding: 10px;
+      margin: 0 0 1em 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  </style>
+</head>
+
+<body>
+  <section>
+    <span>排3-组选：</span>
+    <p id="sports3"></p>
+  </section>
+  <div style="position:sticky;">
+    <span>大乐透：</span>
+    <p id="sports"></p>
+  </div>
+  </br>
+  <section>
+    <span>3D-组选：</span>
+    <p id="welfare3"></p>
+  </section>
+  <section>
+    <span>双色球：</span>
+    <p id="welfare"></p>
+  </section>
+  <script>
+    function getRandomIntInclusive(min, max) {
+      min = Math.ceil(min);
+      max = Math.floor(max);
+      return Math.floor(Math.random() * (max - min + 1)) + min; //含最大值，含最小值
+    }
+
+    function getLottery3() {
+      let array = [];
+      for (let i = 0; i < 3; i++) {
+        array.push(getRandomIntInclusive(0, 9))
+      }
+      return array.join(" ")
+    }
+
+    function getWelfare() {
+      // console.log(33*33*33*33*33*33*16) 20663487504
+      let array = [];
+      for (let i = 0; i < 6; i++) {
+        let num = getRandomIntInclusive(1, 33);
+        while (array.includes(num)) {
+          num = getRandomIntInclusive(1, 33)
         }
-        return array.join(" ")
+        array.push(num)
       }
+      array = array.sort((a, b) => a - b);
+      array.push(getRandomIntInclusive(1, 16))
+      return array.join(" , ")
+    }
 
-      function getWelfare() {
-        let array = [];
-        for (let i = 0; i < 6; i++) {
-          let num = getRandomIntInclusive(1, 33);
-          while(array.includes(num)){
-            num = getRandomIntInclusive(1, 33)
-          }
-          array.push(num)
+    function getSports() {
+      // console.log(35*35*35*35*35*12*12) 7563150000
+      let array = [];
+      for (let i = 0; i < 5; i++) {
+        let num = getRandomIntInclusive(1, 35);
+        while (array.includes(num)) {
+          num = getRandomIntInclusive(1, 35)
         }
-        array = array.sort((a, b) => a - b);
-        array.push(getRandomIntInclusive(1, 16))
-        return array.join(" , ")
+        array.push(num)
       }
+      array = array.sort((a, b) => a - b);
 
-      function getSports() {
-        let array = [];
-        for (let i = 0; i < 5; i++) {
-          let num = getRandomIntInclusive(1, 35);
-          while(array.includes(num)){
-            num = getRandomIntInclusive(1, 33)
-          }
-          array.push(num)
+      let blue = []
+      for (let i = 0; i < 2; i++) {
+        let num = getRandomIntInclusive(1, 12);
+        while (blue.includes(num)) {
+          num = getRandomIntInclusive(1, 12);
         }
-        array = array.sort((a, b) => a - b);
-        array = array.concat([getRandomIntInclusive(1, 12),getRandomIntInclusive(1, 12)].sort((a, b) => a - b))
-        return array.join(" , ")
+        blue.push(num)
       }
-      document.getElementById("welfare3").textContent = getLottery3();
-      document.getElementById("sports3").textContent = getLottery3();
-      document.getElementById("welfare").textContent = getWelfare();
-      document.getElementById("sports").textContent = getSports();
+      blue = blue.sort((a, b) => a - b);
 
-    </script>
+      array = array.concat(blue)
+      return array.join(" , ")
+    }
+    document.getElementById("welfare3").innerHTML = `${getLottery3()}<br/>${getLottery3()}<br/>${getLottery3()}<br/>${getLottery3()}<br/>${getLottery3()}<br/>`;;
+    document.getElementById("sports3").innerHTML = `${getLottery3()}<br/>${getLottery3()}<br/>${getLottery3()}<br/>${getLottery3()}<br/>${getLottery3()}<br/>`;
+    document.getElementById("welfare").innerHTML = `${getWelfare()}<br/>${getWelfare()}<br/>${getWelfare()}<br/>${getWelfare()}<br/>${getWelfare()}<br/>`;
+    document.getElementById("sports").innerHTML = `${getSports()}<br/>${getSports()}<br/>${getSports()}<br/>${getSports()}<br/>${getSports()}<br/>`;
 
-  </body>
+
+
+    let lotteryArray0 = [8, 9, 13, 23, 24, 26, 6, 19, 20, 26, 28, 33, 7, 14, 27, 29, 31, 33, 2, 3, 7, 16, 30, 31, 3, 7, 12, 24, 28, 33, 5, 7, 10, 17, 20, 22]
+    let lotteryArray = [7, 14, 27, 29, 31, 33, 2, 3, 7, 16, 30, 31, 3, 7, 12, 24, 28, 33, 5, 7, 10, 17, 20, 22, 5, 7, 10, 17, 20, 22, 0, 10, 22, 27, 32, 33]
+    //2,1
+    //3,1
+    //9,1
+    //11,0
+    //12,1
+    //17,1
+
+    //8,0
+    //9,0
+    //13,0
+    //23,0
+    //24,1
+    //26,1
+
+    //6, 0
+    //19, 0
+    //20, 2
+    //26, 0
+    //28, 1
+    //33, 3
+
+    var name = "历史"
+
+    var obj = {
+      name: '掌声',
+      sayName() {
+        console.log(this.name)
+      }
+    }
+
+    function sayHi () {
+      var name = "wangwu"
+      console.log(this.name)
+    }
+    obj.sayName()
+    sayHi()
+
+  </script>
+
+</body>
+
 </html>
