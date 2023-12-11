@@ -37,7 +37,7 @@
 
   <script>
     const bucket = new WeakMap(); // 存储副作用函数的桶
-    const data = { text: 'hello world', foo: true, bar: true, num: 1, budget: { count: 1 } };
+    const data = { text: 'hello world', foo: true, bar: true, num: 1, count: 1 };
 
     const obj = new Proxy(data, {
       //拦截读取操作
@@ -114,7 +114,7 @@
     // 全局 effect 栈
     const effectStack = [];
 
-    //effect函数：用于注册副作用函数，进行依赖收集
+    //effect函数：执行副作用函数并进行依赖收集
     function effect(fn, options = {}) {
       //包装副作用函数
       const effectFn = () => {
@@ -163,6 +163,22 @@
       })
     }
 
+    // 调度执行-去重不过渡
+    effect(() => {
+      console.log("调度执行" + obj.count)
+    }, {
+      scheduler(fn) {
+        // 每次调度时，将副作用函数添加到jobQueue队列中
+        jobQueue.add(fn)
+        // 调用 flushJob 刷新队列
+        flushJob()
+      }
+    })
+    obj.count++
+    obj.count++
+    obj.count++
+    obj.count++
+
     // 计算属性
     function computed(getter) {
       let value; // 缓存上一次计算的值
@@ -193,12 +209,23 @@
       }
     }
 
+    // 计算属性：懒执行 + 读取属性时触发副作用函数执行依赖收集并返回结果
+    // 读取对象属性值sum时 -> 触发对象的访问器属性get num(){...} -> 触发包装副作用函数 effectFn 执行进行依赖收集 -> 触发真实副作用函数 getter 执行并返回执行结果
+    const sumRes1 = computed(() => obj.foo + "-" + obj.bar)
+    console.log("--value--", sumRes1.sum)
+    obj.foo = false;
+    console.log("--value--", sumRes1.sum)
+
+    const sumRes2 = computed(() => obj.foo + "-" + obj.bar)
+    effect(() => { console.log(sumRes2.sum) })
+    obj.foo = false;
+
+    // 数据监听
     function traverse(source) {
       for (const k in source) {
         source[k]
       }
     }
-
     function watch(source, cb) {
       effect(
         () => traverse(source), // 触发读取操作从而建立联系
@@ -209,85 +236,376 @@
         }
       )
     }
-
     watch(obj, () => {
       console.log("数据变化了")
     })
     obj.num++
 
 
-    // 计算属性：懒执行 + 读取属性时触发副作用函数执行依赖收集并返回结果
-    // 读取对象属性值sum时 -> 触发对象的访问器属性get num(){...} -> 触发包装副作用函数 effectFn 执行进行依赖收集 -> 触发真实副作用函数 getter 执行并返回执行结果
-    // const sumRes = computed(() => obj.foo + "-" + obj.bar)
-    // console.log("--value--", sumRes.sum)
-    // obj.foo = false;
-    // console.log("--value--", sumRes.sum)
+    // 节点类型： 无节点、文本节点、一组节点
+    function patchChildren(n1, n2, container) {
+      // 新节点：文本节点
+      if (typeof n2.children == 'string') {
+        // 旧节点：一组节点 -> 逐个卸载旧节点
+        if (Array.isArray(n1.children)) {
+          n1.children.forEach(c => unmount(c))
+        }
+        // 旧节点：无节点、文本节点 -> 设置新的文本节点
+        setElementText(container, n2.children)
+      }
+      // 新节点：一组节点
+      else if (Array.isArray(n2.children)) {
+        // 旧节点：一组节点 -> Diff 算法
+        if (Array.isArray(n1.children)) {
+          patchKeyedChildren(n1, n2, container);
+        }
+        // 旧节点：无节点、文本节点 -> 清空容器，逐个挂载新节点
+        else {
+          setElementText(container, "");
+          n2.children.forEach(c => patch(null, c, container));
+        }
+      }
+      // 新节点：无节点
+      else {
+        // 旧节点：一组节点 -> 逐个卸载旧节点
+        if (Array.isArray(n1.children)) {
+          n1.children.forEach(c => unmount(c))
+        }
+        // 旧节点：文本节点 -> 清空容器
+        else {
+          setElementText(container, "");
+        }
+        // 旧节点：无节点 -> 无需操作
+      }
+    }
 
-    // const sumRes = computed(() => obj.foo + "-" + obj.bar)
-    // effect(() => { console.log(sumRes.sum) })
-    // obj.foo = false;
+    // 双端Diff算法
+    function patchKeyedChildren(n1, n2, container) {
+      const oldChildren = n1.children;
+      const newChildren = n2.children;
+      // 四个双端索引值
+      let oldStartIdx = 0;
+      let oldEndIdx = oldChildren.length - 1;
+      let newStartIdx = 0;
+      let newEndIdx = newChildren.length - 1;
+      // 四个索引值指向的 vnode 节点
+      let oldStartVNode = oldChildren[oldStartIdx];
+      let oldEndVNode = oldChildren[oldEndIdx];
+      let newStartVNode = newChildren[newStartIdx];
+      let newEndVNode = newChildren[newEndIdx];
+      // 循环条件 ： 头部索引值小于等于尾部索引值
+      while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+        //跳过也已处理节点
+        if (!oldStartVNode) {
+          oldStartVNode = oldChildren[++oldStartIdx];
+        }
+        //跳过也已处理节点
+        else if (!oldEndVNode) {
+          oldEndVNode = oldChildren[--oldEndIdx];
+        }
+        // 两者都处于头部无需移动，只需更新打补丁
+        else if (oldStartVNode.key === newStartVNode.key) {
+          patch(oldEndVNode, newStartVNode, container); // 更新打补丁
+          oldEndVNode = oldChildren[++oldStartIdx]; // 指向下一个位置
+          newEndVNode = newChildren[++newStartIdx]; // 指向下一个位置
+        }
+        // 两者都处于尾部无需移动，只需更新打补丁
+        else if (oldEndVNode.key === newEndVNode.key) {
+          patch(oldEndVNode, newStartVNode, container); // 更新打补丁
+          oldEndVNode = oldChildren[--oldEndIdx]; // 指向下一个位置
+          newEndVNode = newChildren[--newEndVNode]; // 指向下一个位置
+        }
+        // 原本是头部节点但在新的顺序中变成了尾部节点
+        else if (oldStartVNode.key === newEndVNode.key) {
+          patch(oldEndVNode, newStartVNode, container); // 更新打补丁
+          // oldStartVNode.el 移动到 oldEndVNode.el 后面
+          insert(oldStartVNode.el, container, oldEndVNode.el.nextSibling);
+          oldEndVNode = oldChildren[++oldStartIdx]; // 指向下一个位置
+          newStartVNode = newChildren[--newEndIdx]; // 指向下一个位置
+        }
+        // 原来处于尾部的节点但在新的顺序中应该处于头部
+        else if (oldEndVNode.key === newStartIdx.key) {
+          patch(oldEndVNode, newStartVNode, container); // 更新打补丁
+          // oldEndVNode.el 移动到 oldStartVNode.el 前面
+          insert(oldEndVNode.el, container, oldStartVNode.el);
+          oldEndVNode = oldChildren[--oldEndIdx]; // 指向下一个位置
+          newStartVNode = newChildren[++newStartVNode]; // 指向下一个位置
+        }
+        // 头尾节点均不匹配
+        else {
+          //遍历旧节点 oldChildren ，寻找与 newStartVNode.key 匹配的节点
+          const idxInOld = oldChildren.findIndex(node => node.key === newStartVNode.key)
+          if (idxInOld > 0) {
+            const vnodeToMove = oldChildren[idxInOld];
+            patch(vnodeToMove, newStartVNode, container);
+            // vnodeToMove.el 移动到头部节点 oldStartVNode.el 之前
+            insert(vnodeToMove.el, container, oldStartVNode.el)
+            oldChildren[idxInOld] = undefined; // 置空已移动的节点
+          } else {
+            // 将 newStartVNode 作为新节点挂载 oldStartVNode.el 之前
+            patch(null, newStartVNode, container, oldStartVNode.el);
+          }
+          newStartVNode = newChildren[++newStartIdx]; // 指向下一个位置
+        }
+      }
+
+      // 循环结束后检查索引值情况：有新节点需要挂载
+      if (oldStartIdx < oldEndIdx && newStartIdx <= newEndIdx) {
+        for (let i = newStartIdx; i < newEndIdx; i++) {
+          patch(null, newChildren[i], container, oldStartVNode.el)
+        }
+      }
+      // 循环结束后检查索引值情况：有旧节点需要卸载
+      else if (oldStartIdx <= oldEndIdx && newStartIdx < newEndIdx) {
+        for (let i = oldStartIdx; i < oldStartIdx; i++) {
+          unmount(oldChildren[i])
+        }
+      }
+    }
+
+    // 快速Diff算法
+    function patchKeyedChildrenFast(n1, n2, container) {
+      const oldChildren = n1.children;
+      const newChildren = n2.children;
+
+      // 处理相同的前置节点
+      let j = 0;
+      let oldVNode = oldChildren[j];
+      let newVNode = newChildren[j];
+
+      while (oldVNode.key === newVNode.key) {
+        patch(oldVNode, newVNode, container);
+        j++;
+        oldVNode = oldChildren[j];
+        newVNode = newChildren[j];
+      }
+
+      // 处理相同的后置节点
+      let oldEnd = oldChildren.length - 1;
+      let newEnd = newChildren.length - 1;
+      oldVNode = oldChildren[oldEnd];
+      newVNode = newChildren[newEnd];
+
+      while (oldVNode.key === newVNode.key) {
+        patch(oldVNode, newVNode, container);
+        oldVNode = oldChildren[--oldEnd];
+        newVNode = newChildren[--newEnd];
+      }
+
+      // 预处理结束后：只需新增节点
+      if (j > oldEnd && j <= newEnd) {
+        const anchorIndex = newEnd + 1;
+        const anchor = anchorIndex < newChildren.length ? newChildren[anchorIndex].el : null;
+        while (j <= newEnd) 
+          patch(null, newChildren[j++], container, anchor)
+        }
+      }
+      // 预处理结束后：只需卸载节点
+      else if (j >= oldEnd && j < newEnd) {
+        while (j <= oldEnd) {
+          unmount(oldChildren[j++])
+        }
+      }
+      // 预处理结束后：处理剩余节点
+      else {
+        // 构建新子节点的索引映射表：存储新的一组子节点的key和节点位置索引之间的映射
+        const keyIndex = {};
+        for (let i = newStart; i <= newEnd; i++) {
+          keyIndex[newStart[i].key] = i;
+        }
+        // 构建新子节点的位置索引数组：存储新的一组子节点中的节点在旧的一组子节点中的位置索引
+        // 后面将会使用它计算出一个最长递增子序列，并用于辅助完成 DOM 移动操作
+        const count = newEnd - j + 1;
+        const source = (new Array(count)).fill(-1);
+        const oldStart = j;
+        const newStart = j;
+        // 如果索引值呈递增趋势则无需移动，反之则需要移动
+        let moved = false; // 是否需要移动节点
+        let pos = 0; // 标识遍历旧子节点过程中遇到的最大索引值
+        // 已经更新过的节点数量应该小于新的一组子节点数量，若超过则说明有多余的节点需要卸载
+        let patched = 0; // 标识更新过的节点数量
+        for (let i = oldStart; i <= oldEnd; i++) {
+          if (patched <= count) {
+            const oldVNode = oldChildren[i];
+            // 通过索引映射表，获取与 oldVNode.key 值相同的新子节点的位置索引
+            const k = keyIndex[oldVNode.key];
+            if (typeof k !== 'undefined') {
+              newVNode = newChildren[k];
+              patch(oldVNode, newVNode, container);
+              patched++;
+              // 填充索引数组source：根据新子节点的位置索引，设置旧子节点中的位置索引
+              source[k - newStart] = i;
+              // 判断节点是否需要移动
+
+              if (k < pos) {
+                moved = true;
+              } else {
+                pos = key;
+              }
+            } else {
+              unmount(oldVNode);
+            }
+          } else {
+            unmount(oldVNode);
+          }
+        }
+
+        // moved为真，需要进行DOM移动操作
+        if (moved) {
+          // 根据索引数组source计算最长递增子序列，用于DOM移动操作
+          // 返回值seq为最长递增子序列的索引值
+          const seq = getSequence(source);
+          // s 指向最长递增子序列的最后一个元素
+          let s = seq.length - 1;
+          // i 指向新的一组子节点的最后一个元素
+          let i = count - 1;
+
+          for (i; i >= 0; i--) {
+            // 如果 source[i] === -1，说明是全新节点
+            if (source[i] === -1) {
+              const pos = i + newStart;
+              const newVNode = newChildren[pos];
+              const nextPos = pos + 1;
+              const anchor = nextPos < newChildren.length ? newChildren[nextPos].el : null;
+              patch(null, newVNode, container, anchor)
+            }
+            // 如果节点的索引 i 不等于 seq[s]的值，说明该节点需要移动
+            else if (i !== seq[s]) {
+              const pos = i + newStart;
+              const newVNode = newChildren[pos];
+              const nextPos = pos + 1;
+              const anchor = nextPos < newChildren.length ? newChildren[nextPos].el : null;
+              insert(newVNode.el, container, anchor)
+            }
+            // 当i === seq[s] 时，说明该位置的节点不需要移动，只需移向下一个位置
+            else {
+              s--
+            }
+          }
+        }
+
+      }
+    }
+
+    // 求最长子序列算法
+    function getSequence(arr) {
+
+    }
+
+    // 组件状态自更新
+    function mountComponnent(vnode, container, anchor) {
+      const componentOptinos = vnode.type; // vnode.type属性值为组件的选项对象
+      const { render, data, props: propsOption, setup, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated } = componentOptinos;
+
+      //1. 生命中周期钩子：beforeCreate；获取组件的选项对象
+      beforeCreate && beforeCreate();
+      // 创建响应式数据，调用 data() 函数得到原始数据，并调用 reactive() 函数将其包装为响应式数据
+      const state = reactive(data());
+      // 解析：props、attrs：
+      // 遍历组件传递的props数据，如果在组件props选项中有定义则为props，否则将其作为attrs
+      const [props, attrs] = resolveProps(propsOption, vnode.props)
+      // 创建组件实例，本质是包含与组件有关状态信息的对象
+      const instance = {
+        state, // 组件自身的状态数据，即data
+        props: shallowReactive(props),
+        isMounted: false, // 是否已被挂载
+        subTree: null, // 组件所渲染的内容，虚拟dom
+      }
+
+      function emit(event, ...payload) {
+        const eventName = `on${event[0].toUpperCase() + event.slice(1)}`
+        const handler = instance.props[eventName]
+        if (handler) {
+          // 调用事件处理函数并传递参数
+          handler(...payload);
+        }
+      }
+      // 编译好的 vnode.children 对象作为 slots 对象
+      const slots = vnode.children || {}
+
+      //调用 setup 函数：
+      const setupContext = { attrs, emit, slots }
+      const setupResult = setup(shallowReadonly(instance.props), setupContext)
+      let setupState = null
+      if (typeof setupResult === 'function') {
+        // 若setup的返回值setupResult是函数，将 setupResult 作为渲染函数
+        render = setupResult;
+      } else {
+        // 若setup的返回值setupResult不是函数，作为数据状态赋值给 setupState
+        setupState = setupContext;
+      }
+
+      // 将组件实例设置到 vnode 上，用于后续更新
+      vnode.component = instance;
+      // 创建渲染上下文对象，本质上是组件实例的代理
+      const renderContext = new Proxy(instance, {
+        get(t, k, r) {
+          // 取得组件自身状态与props数据
+          const { state, props } = t;
+          // 先尝试读取自身状态数据
+          if (state && k in state) {
+            return state[k]
+          }
+          // 从 props 中查找读取
+          else if (k in props) {
+            return props[k]
+          }
+          // 从 setupState 中查找读取
+          else if (setupState && k in setupState) {
+            return setupState[k]
+          }
+          else {
+            console.log("不存在")
+          }
+        },
+        get(t, k, v, r) {
+          if (state && k in state) {
+            state[k] = v
+          } else if (k in props) {
+            props[k] = v
+          } else {
+            console.log("不存在")
+          }
+        },
+      })
+
+      //2. 生命中周期钩子：created；创建响应式数据，执行setup，创建渲染上下文对象，创建组件实例
+      created && created(renderContext);
+
+      // 调用 effect 将组件的 render 函数注册为副作用函数
+      effect(() => {
+        // 调用组件的渲染函数 render， 获得子树即vnode
+        // 将其 this 设 设置为 state，从而 render 函数内部可以通过 this 访问组件自身状态数据
+        const subTree = render.call(renderContext, renderContext);
+        //检查组件是否已经被挂载
+        if (!instance.isMounted) {
+          //3. 生命中周期钩子：beforeMount；调用渲染函数获取子树vnode
+          beforeMount && beforeMount();
+          // 初次挂载：调用 patch 函数的第一个参数传递null
+          patch(null, subTree, container, anchor);
+          // 标记状态已挂载，数据变更时执行更新而非挂载操作
+          instance.isMounted = true;
+          //4. 生命中周期钩子：mounted；执行子树vnode的挂载操作
+          mounted && mounted();
+        }
+        // 组件已被挂载，执行更新
+        else {
+          //3. 生命中周期钩子：beforeUpdate；调用渲染函数获取子树vnode
+          beforeUpdate && beforeUpdate();
+          // 更新：调用 patch 函数时传入：旧子树、新子树，进行打补丁操作
+          patch(instance.subTree, subTree, container, anchor);
+          //4. 生命中周期钩子：updated；响应式数据，创建组件实例
+          updated && updated();
+        }
+        // 更新组件实例的子树
+        instance.subTree = subTree;
+      }, {
+        // 指定副作用函数调度器：任务队列Set去重，微任务执行
+        scheduler: queueJob
+      })
+    }
 
 
-    // 调度执行-去重不过渡
-    // effect(() => {
-    //   console.log(obj.num)
-    // }, {
-    //   scheduler(fn) {
-    //     // 每次调度时，将副作用函数添加到jobQueue队列中
-    //     jobQueue.add(fn)
-    //     // 调用 flushJob 刷新队列
-    //     flushJob()
-    //   }
-    // })
-    // 调度执行-宏任务执行时间
-    // effect(() => {
-    //   console.log(obj.num)
-    // }, {
-    //   scheduler(fn) {
-    //     // 将副作用函数放到宏任务队列中执行
-    //     setTimeout(fn)
-    //   }
-    // })
-    // effect(() => {
-    //   console.log(obj.num)
-    // })
-    // obj.num++
-    // obj.num++
-    // obj.num++
-    // obj.num++
-
-    // let temp1, temp2;
-    // //注册副作用函数
-    // effect(function effectFn1() {
-    //   obj.num++
-    // })
-    // setTimeout(() => {
-    //   obj.bar = false
-    //   obj.foo = false
-    //   console.log(bucket)
-    //   console.log("----temp1, temp2-----", temp1, temp2)
-    // }, 2000)
-
-    // //注册副作用函数
-    // effect(function effectFn1() {
-    //   console.log("effectFn1 执行")
-    //   effect(function effectFn2() {
-    //     console.log("effectFn2 执行")
-    //     temp2 = obj.bar;
-    //   })
-    //   temp1 = obj.foo;
-    // })
-    // setTimeout(() => {
-    //   obj.bar = false
-    //   obj.foo = false
-    //   console.log(bucket)
-    //   console.log("----temp1, temp2-----", temp1, temp2)
-    // }, 2000)
-
-    // setTimeout(() => {
-    //   console.log(bucket)
-    //   obj.text = "hello vue"
-    // }, 2000)
   </script>
 
 </body>
